@@ -40,9 +40,7 @@ except ImportError:
         # quoting arguments if windows
         if sys.platform == 'win32':
             def quote(arg):
-                if ' ' in arg:
-                    return '"%s"' % arg
-                return arg
+                return '"%s"' % arg if ' ' in arg else arg
             args = [quote(arg) for arg in args]
         return os.spawnl(os.P_WAIT, sys.executable, *args) == 0
 
@@ -144,7 +142,7 @@ def use_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
         except ImportError:
             return _do_download(version, download_base, to_dir, download_delay)
         try:
-            pkg_resources.require("distribute>="+version)
+            pkg_resources.require(f"distribute>={version}")
             return
         except pkg_resources.VersionConflict:
             e = sys.exc_info()[1]
@@ -183,7 +181,7 @@ def download_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
         from urllib.request import urlopen
     except ImportError:
         from urllib2 import urlopen
-    tgz_name = "distribute-%s.tar.gz" % version
+    tgz_name = f"distribute-{version}.tar.gz"
     url = download_base + tgz_name
     saveto = os.path.join(to_dir, tgz_name)
     src = dst = None
@@ -247,7 +245,7 @@ def _no_sandbox(function):
 
 @_no_sandbox
 def _rename_path(path):
-    new_name = path + '.OLD.%s' % time.time()
+    new_name = path + f'.OLD.{time.time()}'
     log.warn('Renaming %s into %s', path, new_name)
     os.rename(path, new_name)
     return new_name
@@ -296,9 +294,8 @@ def _create_fake_setuptools_pkg_info(placeholder):
     if not placeholder or not os.path.exists(placeholder):
         log.warn('Could not find the install location')
         return
-    pyver = '%s.%s' % (sys.version_info[0], sys.version_info[1])
-    setuptools_file = 'setuptools-%s-py%s.egg-info' % \
-            (SETUPTOOLS_FAKED_VERSION, pyver)
+    pyver = f'{sys.version_info[0]}.{sys.version_info[1]}'
+    setuptools_file = f'setuptools-{SETUPTOOLS_FAKED_VERSION}-py{pyver}.egg-info'
     pkg_info = os.path.join(placeholder, setuptools_file)
     if os.path.exists(pkg_info):
         log.warn('%s already exists', pkg_info)
@@ -322,10 +319,11 @@ def _create_fake_setuptools_pkg_info(placeholder):
 def _patch_egg_dir(path):
     # let's check if it's already patched
     pkg_info = os.path.join(path, 'EGG-INFO', 'PKG-INFO')
-    if os.path.exists(pkg_info):
-        if _same_content(pkg_info, SETUPTOOLS_PKG_INFO):
-            log.warn('%s already patched.', pkg_info)
-            return False
+    if os.path.exists(pkg_info) and _same_content(
+        pkg_info, SETUPTOOLS_PKG_INFO
+    ):
+        log.warn('%s already patched.', pkg_info)
+        return False
     _rename_path(path)
     os.mkdir(path)
     os.mkdir(os.path.join(path, 'EGG-INFO'))
@@ -349,7 +347,7 @@ def _under_prefix(location):
     args = sys.argv[sys.argv.index('install')+1:]
     for index, arg in enumerate(args):
         for option in ('--root', '--prefix'):
-            if arg.startswith('%s=' % option):
+            if arg.startswith(f'{option}='):
                 top_dir = arg.split('root=')[-1]
                 return location.startswith(top_dir)
             elif arg == option:
@@ -395,8 +393,6 @@ def _fake_setuptools():
     if not setuptools_location.endswith('.egg'):
         log.warn('Non-egg installation')
         res = _remove_flat_installation(setuptools_location)
-        if not res:
-            return
     else:
         log.warn('Egg installation')
         pkg_info = os.path.join(setuptools_location, 'EGG-INFO', 'PKG-INFO')
@@ -407,8 +403,8 @@ def _fake_setuptools():
         log.warn('Patching...')
         # let's create a fake egg replacing setuptools one
         res = _patch_egg_dir(setuptools_location)
-        if not res:
-            return
+    if not res:
+        return
     log.warn('Patched done.')
     _relaunch()
 

@@ -22,6 +22,7 @@
 
 """Identify (and optionally delete) stale Delicious and Pinboard links"""
 
+
 __author__ = 'Jon Parise <jon@indelible.org>'
 __version__ = '1.1'
 
@@ -37,7 +38,7 @@ except:
 PINBOARD_API_HOST = 'api.pinboard.in'
 PINBOARD_API_PATH = 'v1'
 PINBOARD_API_REALM = 'API'
-PINBOARD_API = "https://%s/%s" % (PINBOARD_API_HOST, PINBOARD_API_PATH)
+PINBOARD_API = f"https://{PINBOARD_API_HOST}/{PINBOARD_API_PATH}"
 
 colors = { 'normal': '', 'green': '', 'red': '' }
 
@@ -70,12 +71,12 @@ def pinboard_api_request(path, params=None, user='', passwd='', throttle=True,
         pydelicious.Waiter()
 
     if params:
-        url = "%s/%s?%s" % (PINBOARD_API, path, urllib.urlencode(params))
+        url = f"{PINBOARD_API}/{path}?{urllib.urlencode(params)}"
     else:
-        url = "%s/%s" % (PINBOARD_API, path)
+        url = f"{PINBOARD_API}/{path}"
 
-    if pydelicious.DEBUG: print >>sys.stderr, \
-            "pinboard_api_request: %s" % url
+    if pydelicious.DEBUG:
+        (print >>sys.stderr, f"pinboard_api_request: {url}")
 
     if not opener:
         opener = pinboard_api_opener(user, passwd)
@@ -90,7 +91,7 @@ def pinboard_api_request(path, params=None, user='', passwd='', throttle=True,
 def sanitize_url(url):
     hash_position = url.find('#')
     if hash_position != -1:
-        return url[0:hash_position]
+        return url[:hash_position]
     return url
 
 def setup_colors():
